@@ -41,16 +41,14 @@ const init = () => {
   renderer.domElement.addEventListener("mousemove", onMouseMove);
   renderer.domElement.addEventListener("wheel", onDocumentMouseScroll);
 
-  // Освещение
+  //        LIGHTS
   const light = new THREE.PointLight(0xffffff, 1, 8000);
   light.position.set(N * 2, N * 2, N / 2);
   light.castShadow = true;
   scene.add(light);
 
-  // Создаем ландшафт
   addTerrain();
   addSky();
-  // Создаем кисть
   createBrush();
 };
 
