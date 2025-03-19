@@ -1,14 +1,46 @@
 //импорт библиотеки three.js
 import * as THREE from "./jslib/three.module.js";
+import { MTLLoader } from "./jslib/MTLLoader.js";
+import { OBJLoader } from "./jslib/OBJLoader.js";
 
 /*              VARIABLES              */
 let container, scene, renderer, camera, geometry, terrainMesh;
 let targetList = [];
+let draworder = [];
+let drawbox = [];
+let mixer = [];
 const N = 300;
-let radiuscircle = 20;
+let radiusCircle = 20;
 let mouse = { x: 0, y: 0 };
 let isPressed = false;
+let isPressed1 = false;
+let isActiveBrush = false;
 let k = 0.1;
+const gui = new dat.GUI();
+gui.width = 400;
+
+const params = {
+  sx: 0,
+  sy: 0,
+  sz: 0,
+  rx: 0,
+  ry: 0,
+  rz: 0,
+  brush: false,
+  addHouse: function () {
+    addHouse();
+  },
+  addBush: function () {
+    addBush();
+  },
+  addFence: function () {
+    addFence();
+  },
+  del: function () {
+    delMesh();
+  },
+};
+let picked = null;
 
 /*              INITIALIZATION              */
 const init = () => {
@@ -50,6 +82,107 @@ const init = () => {
   addTerrain();
   addSky();
   createBrush();
+
+  const scaleTab = gui.addFolder("Scale");
+  const rotateTab = gui.addFolder("Rotate");
+  const rotateFabric = (value) => {
+    return rotateTab
+      .add(params, "r" + value)
+      .min(0)
+      .max(Math.PI * 2)
+      .step(Math.PI / 180)
+      .listen();
+  };
+  const rotateX = rotateFabric("x");
+  const rotateY = rotateFabric("y");
+  const rotateZ = rotateFabric("z");
+  const meshScaleFabric = (coordinate) => {
+    return scaleTab.add(params, coordinate).min(1).max(100).step(1).listen();
+  };
+  const meshSX = meshScaleFabric("sx");
+  const meshSY = meshScaleFabric("sy");
+  const meshSZ = meshScaleFabric("sz");
+  scaleTab.open();
+  rotateTab.open();
+
+  const meshScaleOnChangeFabric = (coordinate) => {
+    return (value) => {
+      const box = new THREE.Box3();
+      const ind1 = drawbox.indexOf(picked.userData.cube);
+
+      draworder[ind1].scale[coordinate] = params["s" + coordinate];
+      box.setFromObject(draworder[ind1]);
+      draworder[ind1].userData.box = box;
+
+      const pos = new THREE.Vector3();
+      box.getCenter(pos);
+      picked.userData.cube.position.copy(pos);
+
+      const size = new THREE.Vector3();
+      box.getSize(size);
+      picked.userData.obb.position.copy(pos);
+      picked.userData.cube.scale.set(size.x, size.y, size.z);
+      box.getSize(picked.userData.obb.halfSize).multiplyScalar(0.5);
+
+      for (let i = 0; i < drawbox.length; i++) {
+        if (picked.userData.cube != drawbox[i]) {
+          drawbox[i].material.visible = false;
+          drawbox[i].material.color = { r: 1, g: 1, b: 0 };
+
+          if (intersect(picked.userData, drawbox[i].userData) == true) {
+            drawbox[i].material.color = { r: 1, g: 0, b: 0 };
+            drawbox[i].material.visible = true;
+          }
+        }
+      }
+    };
+  };
+  const meshRotateOnChangeFabric = (coordinate) => {
+    return (value) => {
+      var box = new THREE.Box3();
+      var ind1 = drawbox.indexOf(picked.userData.cube);
+      picked.userData.cube.rotation[coordinate] = params["r" + coordinate];
+      draworder[ind1].rotation[coordinate] = params["r" + coordinate];
+      box.setFromObject(draworder[ind1]);
+      draworder[ind1].userData.box = box;
+      var pos = new THREE.Vector3();
+      box.getCenter(pos);
+      picked.userData.cube.position.copy(pos);
+      picked.userData.obb.position.copy(pos);
+      for (var i = 0; i < drawbox.length; i++) {
+        if (picked.userData.cube != drawbox[i]) {
+          drawbox[i].material.visible = false;
+          drawbox[i].material.color = { r: 1, g: 1, b: 0 };
+
+          if (intersect(picked.userData, drawbox[i].userData) == true) {
+            drawbox[i].material.color = { r: 1, g: 0, b: 0 };
+            drawbox[i].material.visible = true;
+          }
+        }
+      }
+    };
+  };
+
+  meshSX.onChange(meshScaleOnChangeFabric("x"));
+  meshSY.onChange(meshScaleOnChangeFabric("y"));
+  meshSZ.onChange(meshScaleOnChangeFabric("z"));
+
+  rotateX.onChange(meshRotateOnChangeFabric("x"));
+  rotateY.onChange(meshRotateOnChangeFabric("y"));
+  rotateZ.onChange(meshRotateOnChangeFabric("z"));
+
+  const cubeVisible = gui.add(params, "brush").name("brush").listen();
+  cubeVisible.onChange((value) => {
+    isActiveBrush = value;
+    cursor.visible = value;
+    circle.visible = value;
+  });
+
+  gui.add(params, "addHouse").name("add house");
+  gui.add(params, "addBush").name("add Bush");
+  gui.add(params, "addFence").name("add Fence");
+
+  gui.open();
 };
 
 /*              TERRAIN CREATION              */
@@ -147,9 +280,9 @@ const updateCircleGeometry = (geometry) => {
     const angle = (i / segments) * Math.PI * 2;
     points.push(
       new THREE.Vector3(
-        Math.cos(angle) * radiuscircle,
+        Math.cos(angle) * radiusCircle,
         0,
-        Math.sin(angle) * radiuscircle
+        Math.sin(angle) * radiusCircle
       )
     );
   }
@@ -164,16 +297,47 @@ const onWindowResize = () => {
 };
 
 const onMouseDown = (event) => {
-  if (event.target === renderer.domElement) {
-    //        ACTIVATION BRUSH
-    if (event.which === 1 || event.which === 3) {
+  if (isActiveBrush) {
+    if (event.which == 1) {
       isPressed = true;
-      k = event.which === 1 ? 0.1 : -0.1;
+      k = 1;
+    }
+    if (event.which == 3) {
+      isPressed = true;
+      k = -1;
+    }
+  } else {
+    isPressed1 = true;
+    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+    //создание луча, исходящего из позиции камеры и проходящего сквозь позицию курсора мыши
+    var vector = new THREE.Vector3(mouse.x, mouse.y, 1);
+    vector.unproject(camera);
+    var ray = new THREE.Raycaster(
+      camera.position,
+      vector.sub(camera.position).normalize()
+    );
+    // создание массива для хранения объектов, с которыми пересечётся луч
+
+    var intersects = ray.intersectObjects(draworder, true);
+    if (intersects.length > 0) {
+      if (picked != null) {
+        picked.userData.cube.material.visible = false;
+        picked = intersects[0].object.parent;
+        picked.userData.cube.material.visible = true;
+      } else {
+        picked = intersects[0].object.parent;
+        picked.userData.cube.material.visible = true;
+      }
+    } else {
+      picked = null;
     }
   }
 };
 
-const onMouseUp = () => (isPressed = false);
+const onMouseUp = () =>
+  isActiveBrush ? (isPressed = false) : (isPressed1 = false);
 
 const onMouseMove = (event) => {
   mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
@@ -185,33 +349,81 @@ const onMouseMove = (event) => {
     vector.sub(camera.position).normalize()
   );
   const intersects = ray.intersectObjects(targetList);
+  if (isActiveBrush) {
+    if (intersects.length > 0) {
+      //печать списка полей объекта
+      cursor.position.copy(intersects[0].point);
+      circle.position.copy(intersects[0].point);
+      circle.position.y = 0;
+      cursor.position.y += 18.5;
 
-  if (intersects.length > 0) {
-    cursor.visible = true;
-    circle.visible = true;
+      for (
+        var i = 0;
+        i < circle.geometry.attributes.position.array.length - 1;
+        i += 3
+      ) {
+        //получение позиции в локальной системе координат
+        var pos = new THREE.Vector3();
+        pos.x = circle.geometry.attributes.position.array[i];
+        pos.y = circle.geometry.attributes.position.array[i + 1];
+        pos.z = circle.geometry.attributes.position.array[i + 2];
 
-    cursor.position
-      .copy(intersects[0].point)
-      .add(new THREE.Vector3(0, 18.5, 0));
-    circle.position.copy(intersects[0].point).setY(0);
+        //нахождение позиции в глобальной системе координат
+        pos.applyMatrix4(circle.matrixWorld);
 
-    if (isPressed) modifyTerrain(intersects[0].point);
+        var x = Math.round(pos.x);
+        var z = Math.round(pos.z);
+        var ind = (z + x * N) * 3;
+
+        if (ind >= 0 && ind < geometry.attributes.position.array.length) {
+          circle.geometry.attributes.position.array[i + 1] =
+            geometry.attributes.position.array[ind + 1] + 0.25;
+        }
+      }
+
+      circle.geometry.attributes.position.needsUpdate = true;
+    }
   } else {
-    cursor.visible = false;
-    circle.visible = false;
+    if (intersects.length > 0) {
+      if (picked != null && isPressed1 == true) {
+        picked.position.copy(intersects[0].point);
+
+        picked.userData.box.setFromObject(picked);
+        var pos = new THREE.Vector3();
+        picked.userData.box.getCenter(pos);
+
+        picked.userData.obb.position.copy(pos);
+
+        picked.userData.cube.position.copy(pos);
+
+        for (var i = 0; i < drawbox.length; i++) {
+          if (picked.userData.cube != drawbox[i]) {
+            drawbox[i].material.visible = false;
+            drawbox[i].material.color = { r: 1, g: 1, b: 0 };
+
+            if (intersect(picked.userData, drawbox[i].userData) == true) {
+              drawbox[i].material.color = { r: 1, g: 0, b: 0 };
+              drawbox[i].material.visible = true;
+            }
+          }
+        }
+      }
+    }
   }
 };
 
 const onDocumentMouseScroll = (event) => {
-  const delta = Math.sign(event.deltaY);
-  radiuscircle = Math.max(1, Math.min(40, radiuscircle - delta));
-  updateCircleGeometry(circle.geometry);
-  circle.geometry.attributes.position.needsUpdate = true;
+  if (isActiveBrush) {
+    const delta = Math.sign(event.deltaY);
+    radiusCircle = Math.max(1, Math.min(40, radiusCircle - delta));
+    updateCircleGeometry(circle.geometry);
+    circle.geometry.attributes.position.needsUpdate = true;
+  }
 };
 
 const modifyTerrain = (center) => {
   const positions = geometry.attributes.position.array;
-  const radiusSq = radiuscircle * radiuscircle;
+  const radiusSq = radiusCircle * radiusCircle;
 
   for (let i = 0; i < positions.length; i += 3) {
     const x = positions[i];
@@ -222,7 +434,7 @@ const modifyTerrain = (center) => {
 
     if (distanceSq < radiusSq) {
       const h = Math.sqrt(radiusSq - distanceSq);
-      positions[i + 1] += k * h;
+      positions[i + 1] += K * h;
     }
   }
 
@@ -234,6 +446,97 @@ const modifyTerrain = (center) => {
 const animate = () => {
   requestAnimationFrame(animate);
   renderer.render(scene, camera);
+};
+
+function addHouse() {
+  loadModel("/models/House/", "Cyprys_House.obj", "Cyprys_House.mtl", 4);
+}
+function addBush() {
+  loadModel("/models/Bush/", "Bush1.obj", "Bush1.mtl", 25);
+}
+function addFence() {
+  loadModel("/models/Fence/", "grade.obj", "grade.mtl", 5);
+}
+
+const loadModel = (path, oname, mname, s) => {
+  if (isActiveBrush == false) {
+    const onProgress = function (xhr) {
+      if (xhr.lengthComputable) {
+        const percentComplete = (xhr.loaded / xhr.total) * 100;
+        console.log(Math.round(percentComplete, 2) + "% downloaded");
+      }
+    };
+    const onError = function () {};
+    const manager = new THREE.LoadingManager();
+    new MTLLoader(manager).setPath(path).load(mname, function (materials) {
+      materials.preload();
+      new OBJLoader(manager)
+        .setMaterials(materials)
+        .setPath(path)
+        .load(
+          oname,
+          function (object) {
+            object.traverse(function (child) {
+              if (child instanceof THREE.Mesh) {
+                child.castShadow = true;
+                child.parent = object;
+              }
+            });
+            object.castShadow = true;
+            object.parent = object;
+            var x = Math.random() * N;
+            var z = Math.random() * N;
+            object.position.x = x;
+            object.position.z = z;
+            object.scale.set(s, s, s);
+
+            var box = new THREE.Box3();
+
+            box.setFromObject(object);
+            object.userData.box = box;
+            var geometry = new THREE.BoxGeometry(1, 1, 1);
+            var material = new THREE.MeshBasicMaterial({
+              color: 0x00ff00,
+              wireframe: true,
+            });
+            var cube = new THREE.Mesh(geometry, material);
+            scene.add(cube);
+
+            cube.material.visible = false;
+
+            var pos = new THREE.Vector3();
+            box.getCenter(pos);
+
+            var size = new THREE.Vector3();
+            box.getSize(size);
+
+            var obb = {};
+            obb.basis = new THREE.Matrix4();
+            obb.halfSize = new THREE.Vector3();
+            obb.position = new THREE.Vector3();
+            box.getCenter(obb.position);
+            box.getSize(obb.halfSize).multiplyScalar(0.5);
+            obb.basis.extractRotation(object.matrixWorld);
+            obb.basis.extractRotation(cube.matrixWorld);
+            object.userData.obb = obb;
+            cube.userData.obb = obb;
+
+            cube.position.copy(pos);
+
+            cube.scale.set(size.x, size.y, size.z);
+
+            object.userData.cube = cube;
+            cube.userData.object = object;
+
+            draworder.push(object);
+            drawbox.push(cube);
+            scene.add(object);
+          },
+          onProgress,
+          onError
+        );
+    });
+  }
 };
 
 init();
