@@ -6,8 +6,8 @@ import { OBJLoader } from "./jslib/OBJLoader.js";
 /*              VARIABLES              */
 let container, scene, renderer, camera, geometry, terrainMesh;
 let targetList = [];
-let draworder = [];
-let drawbox = [];
+let drawOrder = [];
+let drawBox = [];
 let mixer = [];
 const N = 300;
 let radiusCircle = 20;
@@ -15,10 +15,9 @@ let mouse = { x: 0, y: 0 };
 let isPressed = false;
 let isPressed1 = false;
 let isActiveBrush = false;
-let k = 0.1;
-const gui = new dat.GUI();
-gui.width = 400;
+let K = 0.1;
 
+const gui = new dat.GUI();
 const params = {
   sx: 0,
   sy: 0,
@@ -27,18 +26,10 @@ const params = {
   ry: 0,
   rz: 0,
   brush: false,
-  addHouse: function () {
-    addHouse();
-  },
-  addBush: function () {
-    addBush();
-  },
-  addFence: function () {
-    addFence();
-  },
-  del: function () {
-    delMesh();
-  },
+  addHouse: () => addHouse(),
+  addBush: () => addBush(),
+  addFence: () => addFence(),
+  del: () => delMesh(),
 };
 let picked = null;
 
@@ -83,8 +74,9 @@ const init = () => {
   addSky();
   createBrush();
 
-  const scaleTab = gui.addFolder("Scale");
-  const rotateTab = gui.addFolder("Rotate");
+  //        TABS
+  const scaleTab = gui.addFolder("Масштабирование");
+  const rotateTab = gui.addFolder("Поворот");
   const rotateFabric = (value) => {
     return rotateTab
       .add(params, "r" + value)
@@ -108,11 +100,11 @@ const init = () => {
   const meshScaleOnChangeFabric = (coordinate) => {
     return (value) => {
       const box = new THREE.Box3();
-      const ind1 = drawbox.indexOf(picked.userData.cube);
+      const ind1 = drawBox.indexOf(picked.userData.cube);
 
-      draworder[ind1].scale[coordinate] = params["s" + coordinate];
-      box.setFromObject(draworder[ind1]);
-      draworder[ind1].userData.box = box;
+      drawOrder[ind1].scale[coordinate] = params["s" + coordinate];
+      box.setFromObject(drawOrder[ind1]);
+      drawOrder[ind1].userData.box = box;
 
       const pos = new THREE.Vector3();
       box.getCenter(pos);
@@ -124,14 +116,14 @@ const init = () => {
       picked.userData.cube.scale.set(size.x, size.y, size.z);
       box.getSize(picked.userData.obb.halfSize).multiplyScalar(0.5);
 
-      for (let i = 0; i < drawbox.length; i++) {
-        if (picked.userData.cube != drawbox[i]) {
-          drawbox[i].material.visible = false;
-          drawbox[i].material.color = { r: 1, g: 1, b: 0 };
+      for (let i = 0; i < drawBox.length; i++) {
+        if (picked.userData.cube != drawBox[i]) {
+          drawBox[i].material.visible = false;
+          drawBox[i].material.color = { r: 1, g: 1, b: 0 };
 
-          if (intersect(picked.userData, drawbox[i].userData) == true) {
-            drawbox[i].material.color = { r: 1, g: 0, b: 0 };
-            drawbox[i].material.visible = true;
+          if (intersect(picked.userData, drawBox[i].userData) == true) {
+            drawBox[i].material.color = { r: 1, g: 0, b: 0 };
+            drawBox[i].material.visible = true;
           }
         }
       }
@@ -139,24 +131,24 @@ const init = () => {
   };
   const meshRotateOnChangeFabric = (coordinate) => {
     return (value) => {
-      var box = new THREE.Box3();
-      var ind1 = drawbox.indexOf(picked.userData.cube);
+      const box = new THREE.Box3();
+      const ind1 = drawBox.indexOf(picked.userData.cube);
       picked.userData.cube.rotation[coordinate] = params["r" + coordinate];
-      draworder[ind1].rotation[coordinate] = params["r" + coordinate];
-      box.setFromObject(draworder[ind1]);
-      draworder[ind1].userData.box = box;
-      var pos = new THREE.Vector3();
+      drawOrder[ind1].rotation[coordinate] = params["r" + coordinate];
+      box.setFromObject(drawOrder[ind1]);
+      drawOrder[ind1].userData.box = box;
+      let pos = new THREE.Vector3();
       box.getCenter(pos);
       picked.userData.cube.position.copy(pos);
       picked.userData.obb.position.copy(pos);
-      for (var i = 0; i < drawbox.length; i++) {
-        if (picked.userData.cube != drawbox[i]) {
-          drawbox[i].material.visible = false;
-          drawbox[i].material.color = { r: 1, g: 1, b: 0 };
+      for (let i = 0; i < drawBox.length; i++) {
+        if (picked.userData.cube != drawBox[i]) {
+          drawBox[i].material.visible = false;
+          drawBox[i].material.color = { r: 1, g: 1, b: 0 };
 
-          if (intersect(picked.userData, drawbox[i].userData) == true) {
-            drawbox[i].material.color = { r: 1, g: 0, b: 0 };
-            drawbox[i].material.visible = true;
+          if (intersect(picked.userData, drawBox[i].userData) == true) {
+            drawBox[i].material.color = { r: 1, g: 0, b: 0 };
+            drawBox[i].material.visible = true;
           }
         }
       }
@@ -171,16 +163,17 @@ const init = () => {
   rotateY.onChange(meshRotateOnChangeFabric("y"));
   rotateZ.onChange(meshRotateOnChangeFabric("z"));
 
-  const cubeVisible = gui.add(params, "brush").name("brush").listen();
+  const cubeVisible = gui.add(params, "brush").name("Кисть").listen();
   cubeVisible.onChange((value) => {
     isActiveBrush = value;
     cursor.visible = value;
     circle.visible = value;
   });
 
-  gui.add(params, "addHouse").name("add house");
-  gui.add(params, "addBush").name("add Bush");
-  gui.add(params, "addFence").name("add Fence");
+  gui.add(params, "addHouse").name("Добавить дом");
+  gui.add(params, "addBush").name("Добавить куст");
+  gui.add(params, "addFence").name("Добавить ограду");
+  gui.add(params, "del").name("Удалить");
 
   gui.open();
 };
@@ -298,29 +291,27 @@ const onWindowResize = () => {
 
 const onMouseDown = (event) => {
   if (isActiveBrush) {
-    if (event.which == 1) {
-      isPressed = true;
-      k = 1;
-    }
-    if (event.which == 3) {
-      isPressed = true;
-      k = -1;
+    if (event.target === renderer.domElement) {
+      //        ACTIVATION BRUSH
+      if (event.which === 1 || event.which === 3) {
+        isPressed = true;
+        K = event.which === 1 ? 0.1 : -0.1;
+      }
     }
   } else {
     isPressed1 = true;
     mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
     mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
 
-    //создание луча, исходящего из позиции камеры и проходящего сквозь позицию курсора мыши
-    var vector = new THREE.Vector3(mouse.x, mouse.y, 1);
+    //        RAY
+    const vector = new THREE.Vector3(mouse.x, mouse.y, 1);
     vector.unproject(camera);
-    var ray = new THREE.Raycaster(
+    const ray = new THREE.Raycaster(
       camera.position,
       vector.sub(camera.position).normalize()
     );
-    // создание массива для хранения объектов, с которыми пересечётся луч
 
-    var intersects = ray.intersectObjects(draworder, true);
+    var intersects = ray.intersectObjects(drawOrder, true);
     if (intersects.length > 0) {
       if (picked != null) {
         picked.userData.cube.material.visible = false;
@@ -330,9 +321,7 @@ const onMouseDown = (event) => {
         picked = intersects[0].object.parent;
         picked.userData.cube.material.visible = true;
       }
-    } else {
-      picked = null;
-    }
+    } else picked = null;
   }
 };
 
@@ -349,30 +338,30 @@ const onMouseMove = (event) => {
     vector.sub(camera.position).normalize()
   );
   const intersects = ray.intersectObjects(targetList);
+
   if (isActiveBrush) {
     if (intersects.length > 0) {
-      //печать списка полей объекта
       cursor.position.copy(intersects[0].point);
       circle.position.copy(intersects[0].point);
       circle.position.y = 0;
       cursor.position.y += 18.5;
 
       for (
-        var i = 0;
+        let i = 0;
         i < circle.geometry.attributes.position.array.length - 1;
         i += 3
       ) {
-        //получение позиции в локальной системе координат
-        var pos = new THREE.Vector3();
+        //       GET LOCAL POSITION
+        const pos = new THREE.Vector3();
         pos.x = circle.geometry.attributes.position.array[i];
         pos.y = circle.geometry.attributes.position.array[i + 1];
         pos.z = circle.geometry.attributes.position.array[i + 2];
 
-        //нахождение позиции в глобальной системе координат
+        //        FIND GLOBAL POSITION
         pos.applyMatrix4(circle.matrixWorld);
 
-        var x = Math.round(pos.x);
-        var z = Math.round(pos.z);
+        const x = Math.round(pos.x);
+        const z = Math.round(pos.z);
         var ind = (z + x * N) * 3;
 
         if (ind >= 0 && ind < geometry.attributes.position.array.length) {
@@ -389,27 +378,29 @@ const onMouseMove = (event) => {
         picked.position.copy(intersects[0].point);
 
         picked.userData.box.setFromObject(picked);
-        var pos = new THREE.Vector3();
+        const pos = new THREE.Vector3();
         picked.userData.box.getCenter(pos);
 
         picked.userData.obb.position.copy(pos);
 
         picked.userData.cube.position.copy(pos);
 
-        for (var i = 0; i < drawbox.length; i++) {
-          if (picked.userData.cube != drawbox[i]) {
-            drawbox[i].material.visible = false;
-            drawbox[i].material.color = { r: 1, g: 1, b: 0 };
+        for (var i = 0; i < drawBox.length; i++) {
+          if (picked.userData.cube != drawBox[i]) {
+            drawBox[i].material.visible = false;
+            drawBox[i].material.color = { r: 1, g: 1, b: 0 };
 
-            if (intersect(picked.userData, drawbox[i].userData) == true) {
-              drawbox[i].material.color = { r: 1, g: 0, b: 0 };
-              drawbox[i].material.visible = true;
+            if (intersect(picked.userData, drawBox[i].userData) == true) {
+              drawBox[i].material.color = { r: 1, g: 0, b: 0 };
+              drawBox[i].material.visible = true;
             }
           }
         }
       }
     }
   }
+
+  if (isPressed) modifyTerrain(intersects[0].point);
 };
 
 const onDocumentMouseScroll = (event) => {
@@ -448,16 +439,23 @@ const animate = () => {
   renderer.render(scene, camera);
 };
 
-function addHouse() {
+/*              MODELS              */
+const addHouse = () =>
   loadModel("/models/House/", "Cyprys_House.obj", "Cyprys_House.mtl", 4);
-}
-function addBush() {
-  loadModel("/models/Bush/", "Bush1.obj", "Bush1.mtl", 25);
-}
-function addFence() {
-  loadModel("/models/Fence/", "grade.obj", "grade.mtl", 5);
-}
+const addBush = () => loadModel("/models/Bush/", "Bush1.obj", "Bush1.mtl", 25);
+const addFence = () => loadModel("/models/Fence/", "grade.obj", "grade.mtl", 5);
 
+const delMesh = () => {
+  const ind = drawOrder.indexOf(picked.userData.cube);
+  const ind1 = drawBox.indexOf(picked.userData.cube);
+  if (~ind) drawOrder.splice(ind, 1);
+  if (~ind) drawBox.splice(ind1, 1);
+  console.log(ind1);
+  scene.remove(picked.userData.cube);
+  scene.remove(drawOrder[ind1]);
+};
+
+/*              LOADER             */
 const loadModel = (path, oname, mname, s) => {
   if (isActiveBrush == false) {
     const onProgress = function (xhr) {
@@ -484,33 +482,33 @@ const loadModel = (path, oname, mname, s) => {
             });
             object.castShadow = true;
             object.parent = object;
-            var x = Math.random() * N;
-            var z = Math.random() * N;
+            const x = Math.random() * N;
+            const z = Math.random() * N;
             object.position.x = x;
             object.position.z = z;
             object.scale.set(s, s, s);
 
-            var box = new THREE.Box3();
+            const box = new THREE.Box3();
 
             box.setFromObject(object);
             object.userData.box = box;
-            var geometry = new THREE.BoxGeometry(1, 1, 1);
-            var material = new THREE.MeshBasicMaterial({
+            const geometry = new THREE.BoxGeometry(1, 1, 1);
+            const material = new THREE.MeshBasicMaterial({
               color: 0x00ff00,
               wireframe: true,
             });
-            var cube = new THREE.Mesh(geometry, material);
+            const cube = new THREE.Mesh(geometry, material);
             scene.add(cube);
 
             cube.material.visible = false;
 
-            var pos = new THREE.Vector3();
+            const pos = new THREE.Vector3();
             box.getCenter(pos);
 
-            var size = new THREE.Vector3();
+            const size = new THREE.Vector3();
             box.getSize(size);
 
-            var obb = {};
+            const obb = {};
             obb.basis = new THREE.Matrix4();
             obb.halfSize = new THREE.Vector3();
             obb.position = new THREE.Vector3();
@@ -528,8 +526,8 @@ const loadModel = (path, oname, mname, s) => {
             object.userData.cube = cube;
             cube.userData.object = object;
 
-            draworder.push(object);
-            drawbox.push(cube);
+            drawOrder.push(object);
+            drawBox.push(cube);
             scene.add(object);
           },
           onProgress,
@@ -539,5 +537,191 @@ const loadModel = (path, oname, mname, s) => {
   }
 };
 
+const intersect = (ob1, ob2) => {
+  //OOB
+  var xAxisA = new THREE.Vector3();
+  var yAxisA = new THREE.Vector3();
+  var zAxisA = new THREE.Vector3();
+  var xAxisB = new THREE.Vector3();
+  var yAxisB = new THREE.Vector3();
+  var zAxisB = new THREE.Vector3();
+  var translation = new THREE.Vector3();
+  var vector = new THREE.Vector3();
+
+  var axisA = [];
+  var axisB = [];
+  var rotationMatrix = [[], [], []];
+  var rotationMatrixAbs = [[], [], []];
+  var _EPSILON = 1e-3;
+
+  var halfSizeA, halfSizeB;
+  var t, i;
+
+  ob1.obb.basis.extractBasis(xAxisA, yAxisA, zAxisA);
+  ob2.obb.basis.extractBasis(xAxisB, yAxisB, zAxisB);
+
+  // push basis vectors into arrays, so you can access them via indices
+  axisA.push(xAxisA, yAxisA, zAxisA);
+  axisB.push(xAxisB, yAxisB, zAxisB);
+  // get displacement vector
+  vector.subVectors(ob2.obb.position, ob1.obb.position);
+  // express the translation vector in the coordinate frame of the current
+  // OBB (this)
+  for (i = 0; i < 3; i++) {
+    translation.setComponent(i, vector.dot(axisA[i]));
+  }
+  // generate a rotation matrix that transforms from world space to the
+  // OBB's coordinate space
+  for (i = 0; i < 3; i++) {
+    for (var j = 0; j < 3; j++) {
+      rotationMatrix[i][j] = axisA[i].dot(axisB[j]);
+      rotationMatrixAbs[i][j] = Math.abs(rotationMatrix[i][j]) + _EPSILON;
+    }
+  }
+  // test the three major axes of this OBB
+  for (i = 0; i < 3; i++) {
+    vector.set(
+      rotationMatrixAbs[i][0],
+      rotationMatrixAbs[i][1],
+      rotationMatrixAbs[i][2]
+    );
+    halfSizeA = ob1.obb.halfSize.getComponent(i);
+    halfSizeB = ob2.obb.halfSize.dot(vector);
+
+    if (Math.abs(translation.getComponent(i)) > halfSizeA + halfSizeB) {
+      return false;
+    }
+  }
+  // test the three major axes of other OBB
+  for (i = 0; i < 3; i++) {
+    vector.set(
+      rotationMatrixAbs[0][i],
+      rotationMatrixAbs[1][i],
+      rotationMatrixAbs[2][i]
+    );
+    halfSizeA = ob1.obb.halfSize.dot(vector);
+    halfSizeB = ob2.obb.halfSize.getComponent(i);
+    vector.set(
+      rotationMatrix[0][i],
+      rotationMatrix[1][i],
+      rotationMatrix[2][i]
+    );
+    t = translation.dot(vector);
+    if (Math.abs(t) > halfSizeA + halfSizeB) {
+      return false;
+    }
+  }
+  // test the 9 different cross-axes
+  // A.x <cross> B.x
+  halfSizeA =
+    ob1.obb.halfSize.y * rotationMatrixAbs[2][0] +
+    ob1.obb.halfSize.z * rotationMatrixAbs[1][0];
+  halfSizeB =
+    ob2.obb.halfSize.y * rotationMatrixAbs[0][2] +
+    ob2.obb.halfSize.z * rotationMatrixAbs[0][1];
+  t =
+    translation.z * rotationMatrix[1][0] - translation.y * rotationMatrix[2][0];
+  if (Math.abs(t) > halfSizeA + halfSizeB) {
+    return false;
+  }
+  // A.x < cross> B.y
+  halfSizeA =
+    ob1.obb.halfSize.y * rotationMatrixAbs[2][1] +
+    ob1.obb.halfSize.z * rotationMatrixAbs[1][1];
+  halfSizeB =
+    ob2.obb.halfSize.x * rotationMatrixAbs[0][2] +
+    ob2.obb.halfSize.z * rotationMatrixAbs[0][0];
+  t =
+    translation.z * rotationMatrix[1][1] - translation.y * rotationMatrix[2][1];
+  if (Math.abs(t) > halfSizeA + halfSizeB) {
+    return false;
+  }
+  // A.x <cross> B.z
+  halfSizeA =
+    ob1.obb.halfSize.y * rotationMatrixAbs[2][2] +
+    ob1.obb.halfSize.z * rotationMatrixAbs[1][2];
+  halfSizeB =
+    ob2.obb.halfSize.x * rotationMatrixAbs[0][1] +
+    ob2.obb.halfSize.y * rotationMatrixAbs[0][0];
+  t =
+    translation.z * rotationMatrix[1][2] - translation.y * rotationMatrix[2][2];
+  if (Math.abs(t) > halfSizeA + halfSizeB) {
+    return false;
+  }
+  // A.y <cross> B.x
+  halfSizeA =
+    ob1.obb.halfSize.x * rotationMatrixAbs[2][0] +
+    ob1.obb.halfSize.z * rotationMatrixAbs[0][0];
+  halfSizeB =
+    ob2.obb.halfSize.y * rotationMatrixAbs[1][2] +
+    ob2.obb.halfSize.z * rotationMatrixAbs[1][1];
+  t =
+    translation.x * rotationMatrix[2][0] - translation.z * rotationMatrix[0][0];
+  if (Math.abs(t) > halfSizeA + halfSizeB) {
+    return false;
+  }
+  // A.y <cross> B.y
+  halfSizeA =
+    ob1.obb.halfSize.x * rotationMatrixAbs[2][1] +
+    ob1.obb.halfSize.z * rotationMatrixAbs[0][1];
+  halfSizeB =
+    ob2.obb.halfSize.x * rotationMatrixAbs[1][2] +
+    ob2.obb.halfSize.z * rotationMatrixAbs[1][0];
+  t =
+    translation.x * rotationMatrix[2][1] - translation.z * rotationMatrix[0][1];
+  if (Math.abs(t) > halfSizeA + halfSizeB) {
+    return false;
+  }
+  // A.y <cross> B.z
+  halfSizeA =
+    ob1.obb.halfSize.x * rotationMatrixAbs[2][2] +
+    ob1.obb.halfSize.z * rotationMatrixAbs[0][2];
+  halfSizeB =
+    ob2.obb.halfSize.x * rotationMatrixAbs[1][1] +
+    ob2.obb.halfSize.y * rotationMatrixAbs[1][0];
+  t =
+    translation.x * rotationMatrix[2][2] - translation.z * rotationMatrix[0][2];
+  if (Math.abs(t) > halfSizeA + halfSizeB) {
+    return false;
+  }
+  // A.z <cross> B.x
+  halfSizeA =
+    ob1.obb.halfSize.x * rotationMatrixAbs[1][0] +
+    ob1.obb.halfSize.y * rotationMatrixAbs[0][0];
+  halfSizeB =
+    ob2.obb.halfSize.y * rotationMatrixAbs[2][2] +
+    ob2.obb.halfSize.z * rotationMatrixAbs[2][1];
+  t =
+    translation.y * rotationMatrix[0][0] - translation.x * rotationMatrix[1][0];
+  if (Math.abs(t) > halfSizeA + halfSizeB) {
+    return false;
+  }
+  // A.z <cross> B.y
+  halfSizeA =
+    ob1.obb.halfSize.x * rotationMatrixAbs[1][1] +
+    ob1.obb.halfSize.y * rotationMatrixAbs[0][1];
+  halfSizeB =
+    ob2.obb.halfSize.x * rotationMatrixAbs[2][2] +
+    ob2.obb.halfSize.z * rotationMatrixAbs[2][0];
+  t =
+    translation.y * rotationMatrix[0][1] - translation.x * rotationMatrix[1][1];
+  if (Math.abs(t) > halfSizeA + halfSizeB) {
+    return false;
+  }
+  // A.z <cross> B.z
+  halfSizeA =
+    ob1.obb.halfSize.x * rotationMatrixAbs[1][2] +
+    ob1.obb.halfSize.y * rotationMatrixAbs[0][2];
+  halfSizeB =
+    ob2.obb.halfSize.x * rotationMatrixAbs[2][1] +
+    ob2.obb.halfSize.y * rotationMatrixAbs[2][0];
+  t =
+    translation.y * rotationMatrix[0][2] - translation.x * rotationMatrix[1][2];
+  if (Math.abs(t) > halfSizeA + halfSizeB) {
+    return false;
+  }
+  // no separating axis exists, so the two OBB don't intersect
+  return true;
+};
 init();
 animate();
