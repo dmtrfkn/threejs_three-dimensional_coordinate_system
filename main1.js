@@ -298,8 +298,8 @@ class TerrainEditor {
       }
     } else {
       this.isPressed1 = true;
-      this.mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-      this.mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+      this.mouse.x = (event.clientX / window.innerWidth) * 2 - 1; // Используем this.mouse
+      this.mouse.y = -(event.clientY / window.innerHeight) * 2 + 1; // Используем this.mouse
 
       const vector = new THREE.Vector3(this.mouse.x, this.mouse.y, 1).unproject(this.camera);
       const ray = new THREE.Raycaster(
@@ -333,8 +333,8 @@ class TerrainEditor {
   }
 
   onMouseMove(event) {
-    this.mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-    this.mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+    this.mouse.x = (event.clientX / window.innerWidth) * 2 - 1; // Используем this.mouse
+    this.mouse.y = -(event.clientY / window.innerHeight) * 2 + 1; // Используем this.mouse
 
     const vector = new THREE.Vector3(this.mouse.x, this.mouse.y, 1).unproject(this.camera);
     const ray = new THREE.Raycaster(
@@ -344,25 +344,48 @@ class TerrainEditor {
 
     const intersects = ray.intersectObjects(this.targetList);
 
-    if (this.picked && this.isPressed1) {
+    if (this.isActiveBrush) {
       if (intersects.length > 0) {
-        this.picked.position.copy(intersects[0].point);
+        this.cursor.position.copy(intersects[0].point);
+        this.circle.position.copy(intersects[0].point);
+        this.circle.position.y = 0;
+        this.cursor.position.y += 18.5;
 
-        if (this.picked.userData && this.picked.userData.box) {
-          this.picked.userData.box.setFromObject(this.picked);
-
+        for (let i = 0; i < this.circle.geometry.attributes.position.array.length - 1; i += 3) {
           const pos = new THREE.Vector3();
-          this.picked.userData.box.getCenter(pos);
+          pos.x = this.circle.geometry.attributes.position.array[i];
+          pos.y = this.circle.geometry.attributes.position.array[i + 1];
+          pos.z = this.circle.geometry.attributes.position.array[i + 2];
+          pos.applyMatrix4(this.circle.matrixWorld);
 
-          if (this.picked.userData.obb) {
+          const x = Math.round(pos.x);
+          const z = Math.round(pos.z);
+          const index = (z + x * this.N) * 3;
+
+          if (index >= 0 && index < this.terrainMesh.geometry.attributes.position.array.length) {
+            this.circle.geometry.attributes.position.array[i + 1] =
+              this.terrainMesh.geometry.attributes.position.array[index + 1] + 0.25;
+          }
+        }
+
+        this.circle.geometry.attributes.position.needsUpdate = true;
+      }
+    } else {
+      if (intersects.length > 0) {
+        if (this.picked && this.isPressed1) {
+          this.picked.position.copy(intersects[0].point);
+
+          if (this.picked.userData && this.picked.userData.box) {
+            this.picked.userData.box.setFromObject(this.picked);
+
+            const pos = new THREE.Vector3();
+            this.picked.userData.box.getCenter(pos);
+
             this.picked.userData.obb.position.copy(pos);
-          }
-
-          if (this.picked.userData.cube) {
             this.picked.userData.cube.position.copy(pos);
-          }
 
-          this.updateCollisionVisuals();
+            this.updateCollisionVisuals();
+          }
         }
       }
     }
