@@ -1,9 +1,9 @@
 //импорт библиотеки three.js
-import * as THREE from "./jslib/three.module.js";
-import { MTLLoader } from "./jslib/MTLLoader.js";
-import { OBJLoader } from "./jslib/OBJLoader.js";
+import * as THREE from './jslib/three.module.js';
+import { MTLLoader } from './jslib/MTLLoader.js';
+import { OBJLoader } from './jslib/OBJLoader.js';
 
-/*              VARIABLES              */
+/*              letIABLES              */
 let container, scene, renderer, camera, geometry, terrainMesh;
 let targetList = [];
 let drawOrder = [];
@@ -35,16 +35,11 @@ let picked = null;
 
 /*              INITIALIZATION              */
 const init = () => {
-  container = document.getElementById("container");
+  container = document.getElementById('container');
   scene = new THREE.Scene();
 
   //        CAMERA
-  camera = new THREE.PerspectiveCamera(
-    45,
-    window.innerWidth / window.innerHeight,
-    1,
-    4000
-  );
+  camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 4000);
   camera.position.set(N / 4, N / 1.25, N * 2);
   camera.lookAt(new THREE.Vector3(N / 2, 0, N / 2));
 
@@ -55,14 +50,12 @@ const init = () => {
   container.appendChild(renderer.domElement);
 
   //        EVENT HANDLER
-  window.addEventListener("resize", onWindowResize, false);
-  renderer.domElement.addEventListener("contextmenu", (e) =>
-    e.preventDefault()
-  );
-  renderer.domElement.addEventListener("mousedown", onMouseDown);
-  renderer.domElement.addEventListener("mouseup", onMouseUp);
-  renderer.domElement.addEventListener("mousemove", onMouseMove);
-  renderer.domElement.addEventListener("wheel", onDocumentMouseScroll);
+  window.addEventListener('resize', onWindowResize, false);
+  renderer.domElement.addEventListener('contextmenu', (e) => e.preventDefault());
+  renderer.domElement.addEventListener('mousedown', onMouseDown);
+  renderer.domElement.addEventListener('mouseup', onMouseUp);
+  renderer.domElement.addEventListener('mousemove', onMouseMove);
+  renderer.domElement.addEventListener('wheel', onDocumentMouseScroll);
 
   //        LIGHTS
   const light = new THREE.PointLight(0xffffff, 1, 8000);
@@ -75,25 +68,25 @@ const init = () => {
   createBrush();
 
   //        TABS
-  const scaleTab = gui.addFolder("Масштабирование");
-  const rotateTab = gui.addFolder("Поворот");
+  const scaleTab = gui.addFolder('Масштабирование');
+  const rotateTab = gui.addFolder('Поворот');
   const rotateFabric = (value) => {
     return rotateTab
-      .add(params, "r" + value)
+      .add(params, 'r' + value)
       .min(0)
       .max(Math.PI * 2)
       .step(Math.PI / 180)
       .listen();
   };
-  const rotateX = rotateFabric("x");
-  const rotateY = rotateFabric("y");
-  const rotateZ = rotateFabric("z");
+  const rotateX = rotateFabric('x');
+  const rotateY = rotateFabric('y');
+  const rotateZ = rotateFabric('z');
   const meshScaleFabric = (coordinate) => {
     return scaleTab.add(params, coordinate).min(1).max(100).step(1).listen();
   };
-  const meshSX = meshScaleFabric("sx");
-  const meshSY = meshScaleFabric("sy");
-  const meshSZ = meshScaleFabric("sz");
+  const meshSX = meshScaleFabric('sx');
+  const meshSY = meshScaleFabric('sy');
+  const meshSZ = meshScaleFabric('sz');
   scaleTab.open();
   rotateTab.open();
 
@@ -102,7 +95,7 @@ const init = () => {
       const box = new THREE.Box3();
       const ind1 = drawBox.indexOf(picked.userData.cube);
 
-      drawOrder[ind1].scale[coordinate] = params["s" + coordinate];
+      drawOrder[ind1].scale[coordinate] = params['s' + coordinate];
       box.setFromObject(drawOrder[ind1]);
       drawOrder[ind1].userData.box = box;
 
@@ -133,8 +126,8 @@ const init = () => {
     return (value) => {
       const box = new THREE.Box3();
       const ind1 = drawBox.indexOf(picked.userData.cube);
-      picked.userData.cube.rotation[coordinate] = params["r" + coordinate];
-      drawOrder[ind1].rotation[coordinate] = params["r" + coordinate];
+      picked.userData.cube.rotation[coordinate] = params['r' + coordinate];
+      drawOrder[ind1].rotation[coordinate] = params['r' + coordinate];
       box.setFromObject(drawOrder[ind1]);
       drawOrder[ind1].userData.box = box;
       let pos = new THREE.Vector3();
@@ -155,25 +148,25 @@ const init = () => {
     };
   };
 
-  meshSX.onChange(meshScaleOnChangeFabric("x"));
-  meshSY.onChange(meshScaleOnChangeFabric("y"));
-  meshSZ.onChange(meshScaleOnChangeFabric("z"));
+  meshSX.onChange(meshScaleOnChangeFabric('x'));
+  meshSY.onChange(meshScaleOnChangeFabric('y'));
+  meshSZ.onChange(meshScaleOnChangeFabric('z'));
 
-  rotateX.onChange(meshRotateOnChangeFabric("x"));
-  rotateY.onChange(meshRotateOnChangeFabric("y"));
-  rotateZ.onChange(meshRotateOnChangeFabric("z"));
+  rotateX.onChange(meshRotateOnChangeFabric('x'));
+  rotateY.onChange(meshRotateOnChangeFabric('y'));
+  rotateZ.onChange(meshRotateOnChangeFabric('z'));
 
-  const cubeVisible = gui.add(params, "brush").name("Кисть").listen();
+  const cubeVisible = gui.add(params, 'brush').name('Кисть').listen();
   cubeVisible.onChange((value) => {
     isActiveBrush = value;
     cursor.visible = value;
     circle.visible = value;
   });
 
-  gui.add(params, "addHouse").name("Добавить дом");
-  gui.add(params, "addBush").name("Добавить куст");
-  gui.add(params, "addFence").name("Добавить ограду");
-  gui.add(params, "del").name("Удалить");
+  gui.add(params, 'addHouse').name('Добавить дом');
+  gui.add(params, 'addBush').name('Добавить куст');
+  gui.add(params, 'addFence').name('Добавить ограду');
+  gui.add(params, 'del').name('Удалить');
 
   gui.open();
 };
@@ -204,15 +197,12 @@ const addTerrain = () => {
   }
 
   geometry = new THREE.BufferGeometry();
-  geometry.setAttribute(
-    "position",
-    new THREE.Float32BufferAttribute(vertices, 3)
-  );
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
   geometry.setIndex(faces);
-  geometry.setAttribute("uv", new THREE.Float32BufferAttribute(uvs, 2));
+  geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
   geometry.computeVertexNormals();
 
-  const texture = new THREE.TextureLoader().load("./img/grasstile.jpg");
+  const texture = new THREE.TextureLoader().load('./img/grasstile.jpg');
   const material = new THREE.MeshLambertMaterial({ map: texture });
 
   terrainMesh = new THREE.Mesh(geometry, material);
@@ -227,7 +217,7 @@ const addSky = () => {
   const geometry = new THREE.SphereGeometry(1500, 64, 64);
   const maxAnisotropy = renderer.getMaxAnisotropy();
 
-  const tex = loader.load("./img/sky-texture.jpg");
+  const tex = loader.load('./img/sky-texture.jpg');
   tex.anisotropy = maxAnisotropy;
   tex.minFilter = THREE.NearestFilter;
 
@@ -272,11 +262,7 @@ const updateCircleGeometry = (geometry) => {
   for (let i = 0; i <= segments; i++) {
     const angle = (i / segments) * Math.PI * 2;
     points.push(
-      new THREE.Vector3(
-        Math.cos(angle) * radiusCircle,
-        0,
-        Math.sin(angle) * radiusCircle
-      )
+      new THREE.Vector3(Math.cos(angle) * radiusCircle, 0, Math.sin(angle) * radiusCircle),
     );
   }
   geometry.setFromPoints(points);
@@ -306,12 +292,9 @@ const onMouseDown = (event) => {
     //        RAY
     const vector = new THREE.Vector3(mouse.x, mouse.y, 1);
     vector.unproject(camera);
-    const ray = new THREE.Raycaster(
-      camera.position,
-      vector.sub(camera.position).normalize()
-    );
+    const ray = new THREE.Raycaster(camera.position, vector.sub(camera.position).normalize());
 
-    var intersects = ray.intersectObjects(drawOrder, true);
+    let intersects = ray.intersectObjects(drawOrder, true);
     if (intersects.length > 0) {
       if (picked != null) {
         picked.userData.cube.material.visible = false;
@@ -325,18 +308,14 @@ const onMouseDown = (event) => {
   }
 };
 
-const onMouseUp = () =>
-  isActiveBrush ? (isPressed = false) : (isPressed1 = false);
+const onMouseUp = () => (isActiveBrush ? (isPressed = false) : (isPressed1 = false));
 
 const onMouseMove = (event) => {
   mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
   mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
 
   const vector = new THREE.Vector3(mouse.x, mouse.y, 1).unproject(camera);
-  const ray = new THREE.Raycaster(
-    camera.position,
-    vector.sub(camera.position).normalize()
-  );
+  const ray = new THREE.Raycaster(camera.position, vector.sub(camera.position).normalize());
   const intersects = ray.intersectObjects(targetList);
 
   if (isActiveBrush) {
@@ -346,11 +325,7 @@ const onMouseMove = (event) => {
       circle.position.y = 0;
       cursor.position.y += 18.5;
 
-      for (
-        let i = 0;
-        i < circle.geometry.attributes.position.array.length - 1;
-        i += 3
-      ) {
+      for (let i = 0; i < circle.geometry.attributes.position.array.length - 1; i += 3) {
         //       GET LOCAL POSITION
         const pos = new THREE.Vector3();
         pos.x = circle.geometry.attributes.position.array[i];
@@ -362,7 +337,7 @@ const onMouseMove = (event) => {
 
         const x = Math.round(pos.x);
         const z = Math.round(pos.z);
-        var ind = (z + x * N) * 3;
+        let ind = (z + x * N) * 3;
 
         if (ind >= 0 && ind < geometry.attributes.position.array.length) {
           circle.geometry.attributes.position.array[i + 1] =
@@ -385,7 +360,7 @@ const onMouseMove = (event) => {
 
         picked.userData.cube.position.copy(pos);
 
-        for (var i = 0; i < drawBox.length; i++) {
+        for (let i = 0; i < drawBox.length; i++) {
           if (picked.userData.cube != drawBox[i]) {
             drawBox[i].material.visible = false;
             drawBox[i].material.color = { r: 1, g: 1, b: 0 };
@@ -440,10 +415,9 @@ const animate = () => {
 };
 
 /*              MODELS              */
-const addHouse = () =>
-  loadModel("/models/House/", "Cyprys_House.obj", "Cyprys_House.mtl", 4);
-const addBush = () => loadModel("/models/Bush/", "Bush1.obj", "Bush1.mtl", 25);
-const addFence = () => loadModel("/models/Fence/", "grade.obj", "grade.mtl", 5);
+const addHouse = () => loadModel('/models/House/', 'Cyprys_House.obj', 'Cyprys_House.mtl', 4);
+const addBush = () => loadModel('/models/Bush/', 'Bush1.obj', 'Bush1.mtl', 25);
+const addFence = () => loadModel('/models/Fence/', 'grade.obj', 'grade.mtl', 5);
 
 const delMesh = () => {
   const ind = drawOrder.indexOf(picked.userData.cube);
@@ -461,7 +435,7 @@ const loadModel = (path, oname, mname, s) => {
     const onProgress = function (xhr) {
       if (xhr.lengthComputable) {
         const percentComplete = (xhr.loaded / xhr.total) * 100;
-        console.log(Math.round(percentComplete, 2) + "% downloaded");
+        console.log(Math.round(percentComplete, 2) + '% downloaded');
       }
     };
     const onError = function () {};
@@ -531,7 +505,7 @@ const loadModel = (path, oname, mname, s) => {
             scene.add(object);
           },
           onProgress,
-          onError
+          onError,
         );
     });
   }
@@ -539,23 +513,23 @@ const loadModel = (path, oname, mname, s) => {
 
 const intersect = (ob1, ob2) => {
   //OOB
-  var xAxisA = new THREE.Vector3();
-  var yAxisA = new THREE.Vector3();
-  var zAxisA = new THREE.Vector3();
-  var xAxisB = new THREE.Vector3();
-  var yAxisB = new THREE.Vector3();
-  var zAxisB = new THREE.Vector3();
-  var translation = new THREE.Vector3();
-  var vector = new THREE.Vector3();
+  let xAxisA = new THREE.Vector3();
+  let yAxisA = new THREE.Vector3();
+  let zAxisA = new THREE.Vector3();
+  let xAxisB = new THREE.Vector3();
+  let yAxisB = new THREE.Vector3();
+  let zAxisB = new THREE.Vector3();
+  let translation = new THREE.Vector3();
+  let vector = new THREE.Vector3();
 
-  var axisA = [];
-  var axisB = [];
-  var rotationMatrix = [[], [], []];
-  var rotationMatrixAbs = [[], [], []];
-  var _EPSILON = 1e-3;
+  let axisA = [];
+  let axisB = [];
+  let rotationMatrix = [[], [], []];
+  let rotationMatrixAbs = [[], [], []];
+  let _EPSILON = 1e-3;
 
-  var halfSizeA, halfSizeB;
-  var t, i;
+  let halfSizeA, halfSizeB;
+  let t, i;
 
   ob1.obb.basis.extractBasis(xAxisA, yAxisA, zAxisA);
   ob2.obb.basis.extractBasis(xAxisB, yAxisB, zAxisB);
@@ -573,18 +547,14 @@ const intersect = (ob1, ob2) => {
   // generate a rotation matrix that transforms from world space to the
   // OBB's coordinate space
   for (i = 0; i < 3; i++) {
-    for (var j = 0; j < 3; j++) {
+    for (let j = 0; j < 3; j++) {
       rotationMatrix[i][j] = axisA[i].dot(axisB[j]);
       rotationMatrixAbs[i][j] = Math.abs(rotationMatrix[i][j]) + _EPSILON;
     }
   }
   // test the three major axes of this OBB
   for (i = 0; i < 3; i++) {
-    vector.set(
-      rotationMatrixAbs[i][0],
-      rotationMatrixAbs[i][1],
-      rotationMatrixAbs[i][2]
-    );
+    vector.set(rotationMatrixAbs[i][0], rotationMatrixAbs[i][1], rotationMatrixAbs[i][2]);
     halfSizeA = ob1.obb.halfSize.getComponent(i);
     halfSizeB = ob2.obb.halfSize.dot(vector);
 
@@ -594,18 +564,10 @@ const intersect = (ob1, ob2) => {
   }
   // test the three major axes of other OBB
   for (i = 0; i < 3; i++) {
-    vector.set(
-      rotationMatrixAbs[0][i],
-      rotationMatrixAbs[1][i],
-      rotationMatrixAbs[2][i]
-    );
+    vector.set(rotationMatrixAbs[0][i], rotationMatrixAbs[1][i], rotationMatrixAbs[2][i]);
     halfSizeA = ob1.obb.halfSize.dot(vector);
     halfSizeB = ob2.obb.halfSize.getComponent(i);
-    vector.set(
-      rotationMatrix[0][i],
-      rotationMatrix[1][i],
-      rotationMatrix[2][i]
-    );
+    vector.set(rotationMatrix[0][i], rotationMatrix[1][i], rotationMatrix[2][i]);
     t = translation.dot(vector);
     if (Math.abs(t) > halfSizeA + halfSizeB) {
       return false;
@@ -614,109 +576,82 @@ const intersect = (ob1, ob2) => {
   // test the 9 different cross-axes
   // A.x <cross> B.x
   halfSizeA =
-    ob1.obb.halfSize.y * rotationMatrixAbs[2][0] +
-    ob1.obb.halfSize.z * rotationMatrixAbs[1][0];
+    ob1.obb.halfSize.y * rotationMatrixAbs[2][0] + ob1.obb.halfSize.z * rotationMatrixAbs[1][0];
   halfSizeB =
-    ob2.obb.halfSize.y * rotationMatrixAbs[0][2] +
-    ob2.obb.halfSize.z * rotationMatrixAbs[0][1];
-  t =
-    translation.z * rotationMatrix[1][0] - translation.y * rotationMatrix[2][0];
+    ob2.obb.halfSize.y * rotationMatrixAbs[0][2] + ob2.obb.halfSize.z * rotationMatrixAbs[0][1];
+  t = translation.z * rotationMatrix[1][0] - translation.y * rotationMatrix[2][0];
   if (Math.abs(t) > halfSizeA + halfSizeB) {
     return false;
   }
   // A.x < cross> B.y
   halfSizeA =
-    ob1.obb.halfSize.y * rotationMatrixAbs[2][1] +
-    ob1.obb.halfSize.z * rotationMatrixAbs[1][1];
+    ob1.obb.halfSize.y * rotationMatrixAbs[2][1] + ob1.obb.halfSize.z * rotationMatrixAbs[1][1];
   halfSizeB =
-    ob2.obb.halfSize.x * rotationMatrixAbs[0][2] +
-    ob2.obb.halfSize.z * rotationMatrixAbs[0][0];
-  t =
-    translation.z * rotationMatrix[1][1] - translation.y * rotationMatrix[2][1];
+    ob2.obb.halfSize.x * rotationMatrixAbs[0][2] + ob2.obb.halfSize.z * rotationMatrixAbs[0][0];
+  t = translation.z * rotationMatrix[1][1] - translation.y * rotationMatrix[2][1];
   if (Math.abs(t) > halfSizeA + halfSizeB) {
     return false;
   }
   // A.x <cross> B.z
   halfSizeA =
-    ob1.obb.halfSize.y * rotationMatrixAbs[2][2] +
-    ob1.obb.halfSize.z * rotationMatrixAbs[1][2];
+    ob1.obb.halfSize.y * rotationMatrixAbs[2][2] + ob1.obb.halfSize.z * rotationMatrixAbs[1][2];
   halfSizeB =
-    ob2.obb.halfSize.x * rotationMatrixAbs[0][1] +
-    ob2.obb.halfSize.y * rotationMatrixAbs[0][0];
-  t =
-    translation.z * rotationMatrix[1][2] - translation.y * rotationMatrix[2][2];
+    ob2.obb.halfSize.x * rotationMatrixAbs[0][1] + ob2.obb.halfSize.y * rotationMatrixAbs[0][0];
+  t = translation.z * rotationMatrix[1][2] - translation.y * rotationMatrix[2][2];
   if (Math.abs(t) > halfSizeA + halfSizeB) {
     return false;
   }
   // A.y <cross> B.x
   halfSizeA =
-    ob1.obb.halfSize.x * rotationMatrixAbs[2][0] +
-    ob1.obb.halfSize.z * rotationMatrixAbs[0][0];
+    ob1.obb.halfSize.x * rotationMatrixAbs[2][0] + ob1.obb.halfSize.z * rotationMatrixAbs[0][0];
   halfSizeB =
-    ob2.obb.halfSize.y * rotationMatrixAbs[1][2] +
-    ob2.obb.halfSize.z * rotationMatrixAbs[1][1];
-  t =
-    translation.x * rotationMatrix[2][0] - translation.z * rotationMatrix[0][0];
+    ob2.obb.halfSize.y * rotationMatrixAbs[1][2] + ob2.obb.halfSize.z * rotationMatrixAbs[1][1];
+  t = translation.x * rotationMatrix[2][0] - translation.z * rotationMatrix[0][0];
   if (Math.abs(t) > halfSizeA + halfSizeB) {
     return false;
   }
   // A.y <cross> B.y
   halfSizeA =
-    ob1.obb.halfSize.x * rotationMatrixAbs[2][1] +
-    ob1.obb.halfSize.z * rotationMatrixAbs[0][1];
+    ob1.obb.halfSize.x * rotationMatrixAbs[2][1] + ob1.obb.halfSize.z * rotationMatrixAbs[0][1];
   halfSizeB =
-    ob2.obb.halfSize.x * rotationMatrixAbs[1][2] +
-    ob2.obb.halfSize.z * rotationMatrixAbs[1][0];
-  t =
-    translation.x * rotationMatrix[2][1] - translation.z * rotationMatrix[0][1];
+    ob2.obb.halfSize.x * rotationMatrixAbs[1][2] + ob2.obb.halfSize.z * rotationMatrixAbs[1][0];
+  t = translation.x * rotationMatrix[2][1] - translation.z * rotationMatrix[0][1];
   if (Math.abs(t) > halfSizeA + halfSizeB) {
     return false;
   }
   // A.y <cross> B.z
   halfSizeA =
-    ob1.obb.halfSize.x * rotationMatrixAbs[2][2] +
-    ob1.obb.halfSize.z * rotationMatrixAbs[0][2];
+    ob1.obb.halfSize.x * rotationMatrixAbs[2][2] + ob1.obb.halfSize.z * rotationMatrixAbs[0][2];
   halfSizeB =
-    ob2.obb.halfSize.x * rotationMatrixAbs[1][1] +
-    ob2.obb.halfSize.y * rotationMatrixAbs[1][0];
-  t =
-    translation.x * rotationMatrix[2][2] - translation.z * rotationMatrix[0][2];
+    ob2.obb.halfSize.x * rotationMatrixAbs[1][1] + ob2.obb.halfSize.y * rotationMatrixAbs[1][0];
+  t = translation.x * rotationMatrix[2][2] - translation.z * rotationMatrix[0][2];
   if (Math.abs(t) > halfSizeA + halfSizeB) {
     return false;
   }
   // A.z <cross> B.x
   halfSizeA =
-    ob1.obb.halfSize.x * rotationMatrixAbs[1][0] +
-    ob1.obb.halfSize.y * rotationMatrixAbs[0][0];
+    ob1.obb.halfSize.x * rotationMatrixAbs[1][0] + ob1.obb.halfSize.y * rotationMatrixAbs[0][0];
   halfSizeB =
-    ob2.obb.halfSize.y * rotationMatrixAbs[2][2] +
-    ob2.obb.halfSize.z * rotationMatrixAbs[2][1];
-  t =
-    translation.y * rotationMatrix[0][0] - translation.x * rotationMatrix[1][0];
+    ob2.obb.halfSize.y * rotationMatrixAbs[2][2] + ob2.obb.halfSize.z * rotationMatrixAbs[2][1];
+  t = translation.y * rotationMatrix[0][0] - translation.x * rotationMatrix[1][0];
   if (Math.abs(t) > halfSizeA + halfSizeB) {
     return false;
   }
   // A.z <cross> B.y
   halfSizeA =
-    ob1.obb.halfSize.x * rotationMatrixAbs[1][1] +
-    ob1.obb.halfSize.y * rotationMatrixAbs[0][1];
+    ob1.obb.halfSize.x * rotationMatrixAbs[1][1] + ob1.obb.halfSize.y * rotationMatrixAbs[0][1];
   halfSizeB =
-    ob2.obb.halfSize.x * rotationMatrixAbs[2][2] +
-    ob2.obb.halfSize.z * rotationMatrixAbs[2][0];
-  t =
-    translation.y * rotationMatrix[0][1] - translation.x * rotationMatrix[1][1];
+    ob2.obb.halfSize.x * rotationMatrixAbs[2][2] + ob2.obb.halfSize.z * rotationMatrixAbs[2][0];
+  t = translation.y * rotationMatrix[0][1] - translation.x * rotationMatrix[1][1];
   if (Math.abs(t) > halfSizeA + halfSizeB) {
     return false;
   }
   // A.z <cross> B.z
   halfSizeA =
-    ob1.obb.halfSize.x * rotationMatrixAbs[1][2] +
-    ob1.obb.halfSize.y * rotationMatrixAbs[0][2];
+    ob1.obb.halfSize.x * rotationMatrixAbs[1][2] + ob1.obb.halfSize.y * rotationMatrixAbs[0][2];
   halfSizeB =
-    ob2.obb.halfSize.x * rotationMatrixAbs[2][1] +
-    ob2.obb.halfSize.y * rotationMatrixAbs[2][0];
-  t =
-    translation.y * rotationMatrix[0][2] - translation.x * rotationMatrix[1][2];
+    ob2.obb.halfSize.x * rotationMatrixAbs[2][1] + ob2.obb.halfSize.y * rotationMatrixAbs[2][0];
+  t = translation.y * rotationMatrix[0][2] - translation.x * rotationMatrix[1][2];
   if (Math.abs(t) > halfSizeA + halfSizeB) {
     return false;
   }
