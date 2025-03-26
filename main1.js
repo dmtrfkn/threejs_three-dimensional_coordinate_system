@@ -1,11 +1,13 @@
-import * as THREE from './jslib/three.module.js';
-import { MTLLoader } from './jslib/MTLLoader.js';
-import { OBJLoader } from './jslib/OBJLoader.js';
+import * as THREE from "./jslib/three.module.js";
+import { MTLLoader } from "./jslib/MTLLoader.js";
+import { OBJLoader } from "./jslib/OBJLoader.js";
 
 class TerrainEditor {
   constructor() {
     this.N = 300;
     this.radiusCircle = 20;
+    this.radiusSquare = 20;
+    this.isSquareBrush = false;
     this.K = 0.1;
     this.mouse = { x: 0, y: 0 };
     this.isPressed = false;
@@ -34,7 +36,7 @@ class TerrainEditor {
   }
 
   init() {
-    this.container = document.getElementById('container');
+    this.container = document.getElementById("container");
     this.scene = new THREE.Scene();
     this.createCamera();
     this.createRenderer();
@@ -48,7 +50,12 @@ class TerrainEditor {
   }
 
   createCamera() {
-    this.camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 4000);
+    this.camera = new THREE.PerspectiveCamera(
+      45,
+      window.innerWidth / window.innerHeight,
+      1,
+      4000
+    );
     this.camera.position.set(this.N / 4, this.N / 1.25, this.N * 2);
     this.camera.lookAt(new THREE.Vector3(this.N / 2, 0, this.N / 2));
   }
@@ -61,12 +68,22 @@ class TerrainEditor {
   }
 
   addEventListeners() {
-    window.addEventListener('resize', () => this.onWindowResize(), false);
-    this.renderer.domElement.addEventListener('contextmenu', (e) => e.preventDefault());
-    this.renderer.domElement.addEventListener('mousedown', (e) => this.onMouseDown(e));
-    this.renderer.domElement.addEventListener('mouseup', () => this.onMouseUp());
-    this.renderer.domElement.addEventListener('mousemove', (e) => this.onMouseMove(e));
-    this.renderer.domElement.addEventListener('wheel', (e) => this.onDocumentMouseScroll(e));
+    window.addEventListener("resize", () => this.onWindowResize(), false);
+    this.renderer.domElement.addEventListener("contextmenu", (e) =>
+      e.preventDefault()
+    );
+    this.renderer.domElement.addEventListener("mousedown", (e) =>
+      this.onMouseDown(e)
+    );
+    this.renderer.domElement.addEventListener("mouseup", () =>
+      this.onMouseUp()
+    );
+    this.renderer.domElement.addEventListener("mousemove", (e) =>
+      this.onMouseMove(e)
+    );
+    this.renderer.domElement.addEventListener("wheel", (e) =>
+      this.onDocumentMouseScroll(e)
+    );
   }
 
   addLight() {
@@ -99,12 +116,15 @@ class TerrainEditor {
     }
 
     const geometry = new THREE.BufferGeometry();
-    geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+    geometry.setAttribute(
+      "position",
+      new THREE.Float32BufferAttribute(vertices, 3)
+    );
     geometry.setIndex(faces);
-    geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+    geometry.setAttribute("uv", new THREE.Float32BufferAttribute(uvs, 2));
     geometry.computeVertexNormals();
 
-    const texture = new THREE.TextureLoader().load('./img/grasstile.jpg');
+    const texture = new THREE.TextureLoader().load("./img/grasstile.jpg");
     const material = new THREE.MeshLambertMaterial({ map: texture });
 
     this.terrainMesh = new THREE.Mesh(geometry, material);
@@ -116,7 +136,7 @@ class TerrainEditor {
   addSky() {
     const loader = new THREE.TextureLoader();
     const geometry = new THREE.SphereGeometry(1500, 64, 64);
-    const texture = loader.load('./img/sky-texture.jpg');
+    const texture = loader.load("./img/sky-texture.jpg");
 
     texture.anisotropy = this.renderer.getMaxAnisotropy();
     texture.minFilter = THREE.NearestFilter;
@@ -153,8 +173,34 @@ class TerrainEditor {
     this.circle.computeLineDistances();
     this.circle.visible = false;
     this.scene.add(this.circle);
+
+    const squareGeometry = new THREE.BufferGeometry();
+    this.updateSquareGeometry(squareGeometry);
+
+    const squareMaterial = new THREE.LineDashedMaterial({
+      color: 0x00ffff,
+      dashSize: 2,
+      gapSize: 0,
+    });
+
+    this.square = new THREE.LineLoop(squareGeometry, squareMaterial);
+    this.square.computeLineDistances();
+    this.square.visible = false;
+    this.scene.add(this.square);
   }
 
+  updateSquareGeometry(geometry) {
+    const halfSize = this.radiusSquare / 2;
+    const points = [
+      new THREE.Vector3(-halfSize, 0, -halfSize),
+      new THREE.Vector3(halfSize, 0, -halfSize),
+      new THREE.Vector3(halfSize, 0, halfSize),
+      new THREE.Vector3(-halfSize, 0, halfSize),
+      new THREE.Vector3(-halfSize, 0, -halfSize),
+    ];
+
+    geometry.setFromPoints(points);
+  }
   updateCircleGeometry(geometry) {
     const segments = 72;
     const points = [];
@@ -165,8 +211,8 @@ class TerrainEditor {
         new THREE.Vector3(
           Math.cos(angle) * this.radiusCircle,
           0,
-          Math.sin(angle) * this.radiusCircle,
-        ),
+          Math.sin(angle) * this.radiusCircle
+        )
       );
     }
 
@@ -174,11 +220,16 @@ class TerrainEditor {
   }
 
   createGUI() {
-    const scaleTab = this.gui.addFolder('Масштабирование');
-    const rotateTab = this.gui.addFolder('Поворот');
+    const scaleTab = this.gui.addFolder("Масштабирование");
+    const rotateTab = this.gui.addFolder("Поворот");
 
     const createScaleControl = (coord) => {
-      return scaleTab.add(this.params, `s${coord}`).min(1).max(100).step(1).listen();
+      return scaleTab
+        .add(this.params, `s${coord}`)
+        .min(1)
+        .max(100)
+        .step(1)
+        .listen();
     };
 
     const createRotateControl = (coord) => {
@@ -190,34 +241,50 @@ class TerrainEditor {
         .listen();
     };
 
-    const sx = createScaleControl('x');
-    const sy = createScaleControl('y');
-    const sz = createScaleControl('z');
-    const rx = createRotateControl('x');
-    const ry = createRotateControl('y');
-    const rz = createRotateControl('z');
+    const sx = createScaleControl("x");
+    const sy = createScaleControl("y");
+    const sz = createScaleControl("z");
+    const rx = createRotateControl("x");
+    const ry = createRotateControl("y");
+    const rz = createRotateControl("z");
 
-    sx.onChange((value) => this.onScaleChange('x', value));
-    sy.onChange((value) => this.onScaleChange('y', value));
-    sz.onChange((value) => this.onScaleChange('z', value));
+    sx.onChange((value) => this.onScaleChange("x", value));
+    sy.onChange((value) => this.onScaleChange("y", value));
+    sz.onChange((value) => this.onScaleChange("z", value));
 
-    rx.onChange((value) => this.onRotateChange('x', value));
-    ry.onChange((value) => this.onRotateChange('y', value));
-    rz.onChange((value) => this.onRotateChange('z', value));
+    rx.onChange((value) => this.onRotateChange("x", value));
+    ry.onChange((value) => this.onRotateChange("y", value));
+    rz.onChange((value) => this.onRotateChange("z", value));
 
     this.gui
-      .add(this.params, 'brush')
-      .name('Кисть')
+      .add(this.params, "brush")
+      .name("Кисть")
       .onChange((value) => {
         this.isActiveBrush = value;
         this.cursor.visible = value;
         this.circle.visible = value;
       });
 
-    this.gui.add(this.params, 'addHouse').name('Добавить дом');
-    this.gui.add(this.params, 'addBush').name('Добавить куст');
-    this.gui.add(this.params, 'addFence').name('Добавить забор');
-    this.gui.add(this.params, 'del').name('Удалить');
+    this.gui
+      .add({ squareBrush: false }, "squareBrush")
+      .name(" кисть квадрат")
+      .onChange((value) => {
+        this.isSquareBrush = value;
+        if (this.isActiveBrush) {
+          if (value) {
+            this.square.visible = true;
+            this.circle.visible = false;
+          } else {
+            this.circle.visible = true;
+            this.square.visible = false;
+          }
+        }
+      });
+
+    this.gui.add(this.params, "addHouse").name("Добавить дом");
+    this.gui.add(this.params, "addBush").name("Добавить куст");
+    this.gui.add(this.params, "addFence").name("Добавить забор");
+    this.gui.add(this.params, "del").name("Удалить");
     this.gui.open();
   }
 
@@ -268,7 +335,8 @@ class TerrainEditor {
 
   updateCollisionVisuals() {
     for (let i = 0; i < this.drawBox.length; i++) {
-      if (this.picked && this.picked.userData.cube === this.drawBox[i]) continue;
+      if (this.picked && this.picked.userData.cube === this.drawBox[i])
+        continue;
 
       this.drawBox[i].material.visible = false;
       this.drawBox[i].material.color.set(0xffff00);
@@ -301,10 +369,12 @@ class TerrainEditor {
       this.mouse.x = (event.clientX / window.innerWidth) * 2 - 1; // Используем this.mouse
       this.mouse.y = -(event.clientY / window.innerHeight) * 2 + 1; // Используем this.mouse
 
-      const vector = new THREE.Vector3(this.mouse.x, this.mouse.y, 1).unproject(this.camera);
+      const vector = new THREE.Vector3(this.mouse.x, this.mouse.y, 1).unproject(
+        this.camera
+      );
       const ray = new THREE.Raycaster(
         this.camera.position,
-        vector.sub(this.camera.position).normalize(),
+        vector.sub(this.camera.position).normalize()
       );
 
       const intersects = ray.intersectObjects(this.drawOrder, true);
@@ -336,39 +406,81 @@ class TerrainEditor {
     this.mouse.x = (event.clientX / window.innerWidth) * 2 - 1; // Используем this.mouse
     this.mouse.y = -(event.clientY / window.innerHeight) * 2 + 1; // Используем this.mouse
 
-    const vector = new THREE.Vector3(this.mouse.x, this.mouse.y, 1).unproject(this.camera);
+    const vector = new THREE.Vector3(this.mouse.x, this.mouse.y, 1).unproject(
+      this.camera
+    );
     const ray = new THREE.Raycaster(
       this.camera.position,
-      vector.sub(this.camera.position).normalize(),
+      vector.sub(this.camera.position).normalize()
     );
 
     const intersects = ray.intersectObjects(this.targetList);
 
     if (this.isActiveBrush) {
       if (intersects.length > 0) {
-        this.cursor.position.copy(intersects[0].point);
-        this.circle.position.copy(intersects[0].point);
-        this.circle.position.y = 0;
-        this.cursor.position.y += 18.5;
+        const intersectPoint = intersects[0].point;
+        this.cursor.position.copy(intersectPoint);
 
-        for (let i = 0; i < this.circle.geometry.attributes.position.array.length - 1; i += 3) {
-          const pos = new THREE.Vector3();
-          pos.x = this.circle.geometry.attributes.position.array[i];
-          pos.y = this.circle.geometry.attributes.position.array[i + 1];
-          pos.z = this.circle.geometry.attributes.position.array[i + 2];
-          pos.applyMatrix4(this.circle.matrixWorld);
+        // Обновляем позицию текущей кисти (круг или квадрат)
+        if (this.isSquareBrush) {
+          this.square.position.copy(intersectPoint);
+          this.square.position.y = 0;
+          this.cursor.position.y += 18.5;
 
-          const x = Math.round(pos.x);
-          const z = Math.round(pos.z);
-          const index = (z + x * this.N) * 3;
+          // Обновляем высоту вершин квадрата по ландшафту
+          const positions = this.square.geometry.attributes.position.array;
+          const halfSize = this.radiusSquare / 2;
+          const corners = [
+            { x: -halfSize, z: -halfSize },
+            { x: halfSize, z: -halfSize },
+            { x: halfSize, z: halfSize },
+            { x: -halfSize, z: halfSize },
+            { x: -halfSize, z: -halfSize },
+          ];
 
-          if (index >= 0 && index < this.terrainMesh.geometry.attributes.position.array.length) {
-            this.circle.geometry.attributes.position.array[i + 1] =
-              this.terrainMesh.geometry.attributes.position.array[index + 1] + 0.25;
+          for (let i = 0; i < corners.length; i++) {
+            const worldPos = new THREE.Vector3(
+              intersectPoint.x + corners[i].x,
+              0,
+              intersectPoint.z + corners[i].z
+            );
+
+            const height = this.getTerrainHeight(worldPos.x, worldPos.z);
+            positions[i * 3 + 1] = height + 0.25;
           }
-        }
 
-        this.circle.geometry.attributes.position.needsUpdate = true;
+          this.square.geometry.attributes.position.needsUpdate = true;
+        } else {
+          this.circle.position.copy(intersectPoint);
+          this.circle.position.y = 0;
+          this.cursor.position.y += 18.5;
+
+          for (
+            let i = 0;
+            i < this.circle.geometry.attributes.position.array.length - 1;
+            i += 3
+          ) {
+            const pos = new THREE.Vector3();
+            pos.x = this.circle.geometry.attributes.position.array[i];
+            pos.y = this.circle.geometry.attributes.position.array[i + 1];
+            pos.z = this.circle.geometry.attributes.position.array[i + 2];
+            pos.applyMatrix4(this.circle.matrixWorld);
+
+            const x = Math.round(pos.x);
+            const z = Math.round(pos.z);
+            const index = (z + x * this.N) * 3;
+
+            if (
+              index >= 0 &&
+              index < this.terrainMesh.geometry.attributes.position.array.length
+            ) {
+              this.circle.geometry.attributes.position.array[i + 1] =
+                this.terrainMesh.geometry.attributes.position.array[index + 1] +
+                0.25;
+            }
+          }
+          this.circle.geometry.attributes.position.needsUpdate = true;
+        }
       }
     } else {
       if (intersects.length > 0) {
@@ -401,30 +513,102 @@ class TerrainEditor {
     if (!this.isActiveBrush) return;
 
     const delta = Math.sign(event.deltaY);
-    this.radiusCircle = Math.max(1, Math.min(40, this.radiusCircle - delta));
-    this.updateCircleGeometry(this.circle.geometry);
-    this.circle.geometry.attributes.position.needsUpdate = true;
+    if (this.isSquareBrush) {
+      this.radiusSquare = Math.max(1, Math.min(80, this.radiusSquare - delta));
+      this.updateSquareGeometry(this.square.geometry);
+      this.square.geometry.attributes.position.needsUpdate = true;
+    } else {
+      this.radiusCircle = Math.max(1, Math.min(40, this.radiusCircle - delta));
+      this.updateCircleGeometry(this.circle.geometry);
+      this.circle.geometry.attributes.position.needsUpdate = true;
+    }
   }
 
   modifyTerrain(center) {
     const positions = this.terrainMesh.geometry.attributes.position.array;
-    const radiusSq = this.radiusCircle ** 2;
 
-    for (let i = 0; i < positions.length; i += 3) {
-      const dx = positions[i] - center.x;
-      const dz = positions[i + 2] - center.z;
-      const distanceSq = dx ** 2 + dz ** 2;
+    if (this.isSquareBrush) {
+      const halfSize = this.radiusSquare / 2;
+      const minX = center.x - halfSize;
+      const maxX = center.x + halfSize;
+      const minZ = center.z - halfSize;
+      const maxZ = center.z + halfSize;
 
-      if (distanceSq < radiusSq) {
-        const h = Math.sqrt(radiusSq - distanceSq);
-        positions[i + 1] += this.K * h;
+      for (let i = 0; i < positions.length; i += 3) {
+        const x = positions[i];
+        const z = positions[i + 2];
+
+        if (x >= minX && x <= maxX && z >= minZ && z <= maxZ) {
+          positions[i + 1] += this.K * 10;
+        }
+      }
+    } else {
+      // circle
+      const radiusSq = this.radiusCircle ** 2;
+      for (let i = 0; i < positions.length; i += 3) {
+        const dx = positions[i] - center.x;
+        const dz = positions[i + 2] - center.z;
+        const distanceSq = dx ** 2 + dz ** 2;
+
+        if (distanceSq < radiusSq) {
+          const h = Math.sqrt(radiusSq - distanceSq);
+          positions[i + 1] += this.K * h;
+        }
       }
     }
+
+    // Обновление объектов на местности (остается без изменений)
+    this.drawOrder.forEach((object) => {
+      const box = object.userData.box;
+      const centerPos = new THREE.Vector3();
+      box.getCenter(centerPos);
+
+      let distanceSq;
+      if (this.isSquareBrush) {
+        const halfSize = this.radiusSquare / 2;
+        const inX = Math.abs(centerPos.x - center.x) <= halfSize;
+        const inZ = Math.abs(centerPos.z - center.z) <= halfSize;
+        distanceSq = inX && inZ ? 0 : Infinity;
+      } else {
+        const dx = centerPos.x - center.x;
+        const dz = centerPos.z - center.z;
+        distanceSq = dx ** 2 + dz ** 2;
+      }
+
+      if (distanceSq < (this.isSquareBrush ? 1 : radiusSq)) {
+        const terrainHeight = this.getTerrainHeight(
+          object.position.x,
+          object.position.z
+        );
+
+        const objectBaseOffset = object.position.y - box.min.y;
+        object.position.y = terrainHeight + objectBaseOffset;
+        object.userData.box.setFromObject(object);
+        const newPos = new THREE.Vector3();
+        object.userData.box.getCenter(newPos);
+
+        object.userData.cube.position.copy(newPos);
+        object.userData.obb.position.copy(newPos);
+
+        const size = new THREE.Vector3();
+        object.userData.box.getSize(size);
+        object.userData.cube.scale.copy(size);
+        object.userData.obb.halfSize.copy(size).multiplyScalar(0.5);
+      }
+    });
 
     this.terrainMesh.geometry.attributes.position.needsUpdate = true;
     this.terrainMesh.geometry.computeVertexNormals();
   }
 
+  getTerrainHeight(x, z) {
+    x = Math.max(0, Math.min(this.N - 1, x));
+    z = Math.max(0, Math.min(this.N - 1, z));
+
+    const positions = this.terrainMesh.geometry.attributes.position.array;
+    const index = (Math.floor(z) + Math.floor(x) * this.N) * 3 + 1;
+    return positions[index] || 0;
+  }
   animate() {
     requestAnimationFrame(() => this.animate());
     this.renderer.render(this.scene, this.camera);
@@ -491,15 +675,15 @@ class TerrainEditor {
   };
 
   addHouse() {
-    this.loadModel('/models/House/', 'Cyprys_House.obj', 'Cyprys_House.mtl', 4);
+    this.loadModel("/models/House/", "Cyprys_House.obj", "Cyprys_House.mtl", 4);
   }
 
   addBush() {
-    this.loadModel('/models/Bush/', 'Bush1.obj', 'Bush1.mtl', 25);
+    this.loadModel("/models/Bush/", "Bush1.obj", "Bush1.mtl", 25);
   }
 
   addFence() {
-    this.loadModel('/models/Fence/', 'grade.obj', 'grade.mtl', 5);
+    this.loadModel("/models/Fence/", "grade.obj", "grade.mtl", 5);
   }
 
   delMesh() {
@@ -550,17 +734,30 @@ class TerrainEditor {
     }
 
     for (let i = 0; i < 3; i++) {
-      vector.set(rotationMatrixAbs[i][0], rotationMatrixAbs[i][1], rotationMatrixAbs[i][2]);
+      vector.set(
+        rotationMatrixAbs[i][0],
+        rotationMatrixAbs[i][1],
+        rotationMatrixAbs[i][2]
+      );
       halfSizeA = ob1.obb.halfSize.getComponent(i);
       halfSizeB = ob2.obb.halfSize.dot(vector);
-      if (Math.abs(translation.getComponent(i)) > halfSizeA + halfSizeB) return false;
+      if (Math.abs(translation.getComponent(i)) > halfSizeA + halfSizeB)
+        return false;
     }
 
     for (let i = 0; i < 3; i++) {
-      vector.set(rotationMatrixAbs[0][i], rotationMatrixAbs[1][i], rotationMatrixAbs[2][i]);
+      vector.set(
+        rotationMatrixAbs[0][i],
+        rotationMatrixAbs[1][i],
+        rotationMatrixAbs[2][i]
+      );
       halfSizeA = ob1.obb.halfSize.dot(vector);
       halfSizeB = ob2.obb.halfSize.getComponent(i);
-      vector.set(rotationMatrix[0][i], rotationMatrix[1][i], rotationMatrix[2][i]);
+      vector.set(
+        rotationMatrix[0][i],
+        rotationMatrix[1][i],
+        rotationMatrix[2][i]
+      );
       t = translation.dot(vector);
       if (Math.abs(t) > halfSizeA + halfSizeB) return false;
     }
@@ -568,74 +765,110 @@ class TerrainEditor {
     // Cross-axis checks (9 combinations)
     // A.x × B.x
     halfSizeA =
-      ob1.obb.halfSize.y * rotationMatrixAbs[2][0] + ob1.obb.halfSize.z * rotationMatrixAbs[1][0];
+      ob1.obb.halfSize.y * rotationMatrixAbs[2][0] +
+      ob1.obb.halfSize.z * rotationMatrixAbs[1][0];
     halfSizeB =
-      ob2.obb.halfSize.y * rotationMatrixAbs[0][2] + ob2.obb.halfSize.z * rotationMatrixAbs[0][1];
-    t = translation.z * rotationMatrix[1][0] - translation.y * rotationMatrix[2][0];
+      ob2.obb.halfSize.y * rotationMatrixAbs[0][2] +
+      ob2.obb.halfSize.z * rotationMatrixAbs[0][1];
+    t =
+      translation.z * rotationMatrix[1][0] -
+      translation.y * rotationMatrix[2][0];
     if (Math.abs(t) > halfSizeA + halfSizeB) return false;
 
     // A.x × B.y
     halfSizeA =
-      ob1.obb.halfSize.y * rotationMatrixAbs[2][1] + ob1.obb.halfSize.z * rotationMatrixAbs[1][1];
+      ob1.obb.halfSize.y * rotationMatrixAbs[2][1] +
+      ob1.obb.halfSize.z * rotationMatrixAbs[1][1];
     halfSizeB =
-      ob2.obb.halfSize.x * rotationMatrixAbs[0][2] + ob2.obb.halfSize.z * rotationMatrixAbs[0][0];
-    t = translation.z * rotationMatrix[1][1] - translation.y * rotationMatrix[2][1];
+      ob2.obb.halfSize.x * rotationMatrixAbs[0][2] +
+      ob2.obb.halfSize.z * rotationMatrixAbs[0][0];
+    t =
+      translation.z * rotationMatrix[1][1] -
+      translation.y * rotationMatrix[2][1];
     if (Math.abs(t) > halfSizeA + halfSizeB) return false;
 
     // A.x × B.z
     halfSizeA =
-      ob1.obb.halfSize.y * rotationMatrixAbs[2][2] + ob1.obb.halfSize.z * rotationMatrixAbs[1][2];
+      ob1.obb.halfSize.y * rotationMatrixAbs[2][2] +
+      ob1.obb.halfSize.z * rotationMatrixAbs[1][2];
     halfSizeB =
-      ob2.obb.halfSize.x * rotationMatrixAbs[0][1] + ob2.obb.halfSize.y * rotationMatrixAbs[0][0];
-    t = translation.z * rotationMatrix[1][2] - translation.y * rotationMatrix[2][2];
+      ob2.obb.halfSize.x * rotationMatrixAbs[0][1] +
+      ob2.obb.halfSize.y * rotationMatrixAbs[0][0];
+    t =
+      translation.z * rotationMatrix[1][2] -
+      translation.y * rotationMatrix[2][2];
     if (Math.abs(t) > halfSizeA + halfSizeB) return false;
 
     // A.y × B.x
     halfSizeA =
-      ob1.obb.halfSize.x * rotationMatrixAbs[2][0] + ob1.obb.halfSize.z * rotationMatrixAbs[0][0];
+      ob1.obb.halfSize.x * rotationMatrixAbs[2][0] +
+      ob1.obb.halfSize.z * rotationMatrixAbs[0][0];
     halfSizeB =
-      ob2.obb.halfSize.y * rotationMatrixAbs[1][2] + ob2.obb.halfSize.z * rotationMatrixAbs[1][1];
-    t = translation.x * rotationMatrix[2][0] - translation.z * rotationMatrix[0][0];
+      ob2.obb.halfSize.y * rotationMatrixAbs[1][2] +
+      ob2.obb.halfSize.z * rotationMatrixAbs[1][1];
+    t =
+      translation.x * rotationMatrix[2][0] -
+      translation.z * rotationMatrix[0][0];
     if (Math.abs(t) > halfSizeA + halfSizeB) return false;
 
     // A.y × B.y
     halfSizeA =
-      ob1.obb.halfSize.x * rotationMatrixAbs[2][1] + ob1.obb.halfSize.z * rotationMatrixAbs[0][1];
+      ob1.obb.halfSize.x * rotationMatrixAbs[2][1] +
+      ob1.obb.halfSize.z * rotationMatrixAbs[0][1];
     halfSizeB =
-      ob2.obb.halfSize.x * rotationMatrixAbs[1][2] + ob2.obb.halfSize.z * rotationMatrixAbs[1][0];
-    t = translation.x * rotationMatrix[2][1] - translation.z * rotationMatrix[0][1];
+      ob2.obb.halfSize.x * rotationMatrixAbs[1][2] +
+      ob2.obb.halfSize.z * rotationMatrixAbs[1][0];
+    t =
+      translation.x * rotationMatrix[2][1] -
+      translation.z * rotationMatrix[0][1];
     if (Math.abs(t) > halfSizeA + halfSizeB) return false;
 
     // A.y × B.z
     halfSizeA =
-      ob1.obb.halfSize.x * rotationMatrixAbs[2][2] + ob1.obb.halfSize.z * rotationMatrixAbs[0][2];
+      ob1.obb.halfSize.x * rotationMatrixAbs[2][2] +
+      ob1.obb.halfSize.z * rotationMatrixAbs[0][2];
     halfSizeB =
-      ob2.obb.halfSize.x * rotationMatrixAbs[1][1] + ob2.obb.halfSize.y * rotationMatrixAbs[1][0];
-    t = translation.x * rotationMatrix[2][2] - translation.z * rotationMatrix[0][2];
+      ob2.obb.halfSize.x * rotationMatrixAbs[1][1] +
+      ob2.obb.halfSize.y * rotationMatrixAbs[1][0];
+    t =
+      translation.x * rotationMatrix[2][2] -
+      translation.z * rotationMatrix[0][2];
     if (Math.abs(t) > halfSizeA + halfSizeB) return false;
 
     // A.z × B.x
     halfSizeA =
-      ob1.obb.halfSize.x * rotationMatrixAbs[1][0] + ob1.obb.halfSize.y * rotationMatrixAbs[0][0];
+      ob1.obb.halfSize.x * rotationMatrixAbs[1][0] +
+      ob1.obb.halfSize.y * rotationMatrixAbs[0][0];
     halfSizeB =
-      ob2.obb.halfSize.y * rotationMatrixAbs[2][2] + ob2.obb.halfSize.z * rotationMatrixAbs[2][1];
-    t = translation.y * rotationMatrix[0][0] - translation.x * rotationMatrix[1][0];
+      ob2.obb.halfSize.y * rotationMatrixAbs[2][2] +
+      ob2.obb.halfSize.z * rotationMatrixAbs[2][1];
+    t =
+      translation.y * rotationMatrix[0][0] -
+      translation.x * rotationMatrix[1][0];
     if (Math.abs(t) > halfSizeA + halfSizeB) return false;
 
     // A.z × B.y
     halfSizeA =
-      ob1.obb.halfSize.x * rotationMatrixAbs[1][1] + ob1.obb.halfSize.y * rotationMatrixAbs[0][1];
+      ob1.obb.halfSize.x * rotationMatrixAbs[1][1] +
+      ob1.obb.halfSize.y * rotationMatrixAbs[0][1];
     halfSizeB =
-      ob2.obb.halfSize.x * rotationMatrixAbs[2][2] + ob2.obb.halfSize.z * rotationMatrixAbs[2][0];
-    t = translation.y * rotationMatrix[0][1] - translation.x * rotationMatrix[1][1];
+      ob2.obb.halfSize.x * rotationMatrixAbs[2][2] +
+      ob2.obb.halfSize.z * rotationMatrixAbs[2][0];
+    t =
+      translation.y * rotationMatrix[0][1] -
+      translation.x * rotationMatrix[1][1];
     if (Math.abs(t) > halfSizeA + halfSizeB) return false;
 
     // A.z × B.z
     halfSizeA =
-      ob1.obb.halfSize.x * rotationMatrixAbs[1][2] + ob1.obb.halfSize.y * rotationMatrixAbs[0][2];
+      ob1.obb.halfSize.x * rotationMatrixAbs[1][2] +
+      ob1.obb.halfSize.y * rotationMatrixAbs[0][2];
     halfSizeB =
-      ob2.obb.halfSize.x * rotationMatrixAbs[2][1] + ob2.obb.halfSize.y * rotationMatrixAbs[2][0];
-    t = translation.y * rotationMatrix[0][2] - translation.x * rotationMatrix[1][2];
+      ob2.obb.halfSize.x * rotationMatrixAbs[2][1] +
+      ob2.obb.halfSize.y * rotationMatrixAbs[2][0];
+    t =
+      translation.y * rotationMatrix[0][2] -
+      translation.x * rotationMatrix[1][2];
     if (Math.abs(t) > halfSizeA + halfSizeB) return false;
 
     return true;
